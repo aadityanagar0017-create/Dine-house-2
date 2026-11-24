@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dine House — Share Your Experience</title>
+  <meta name="description" content="We would love to hear about your dining experience at Dine House. Rate your visit, select highlights, and craft a review to share on Google." />
+  <meta property="og:title" content="Dine House — Share Your Experience" />
+  <meta property="og:description" content="Rate your visit and craft a personalized guest review for Dine House." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Google Fonts: Cormorant Garamond (Display) + Plus Jakarta Sans (Body & UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- D3.js v7 for Session Star Rating Distribution Bar Chart -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+
+  <style>
+    /* =========================================================================
+       OWNER STYLING & COLOR PALETTE CONFIGURATION
+       To update the background image in CSS directly, edit --bg-image-url below
+       AND/OR update RESTAURANT_CONFIG.backgroundImageUrl in the <script> tag.
+       ========================================================================= */
+    :root {
+      --bg-image-url: url('/src/assets/images/dine_house_backdrop_1795517749233.jpg');
+      --color-black: #0c0907;
+      --color-espresso: #18120e;
+      --color-espresso-card: rgba(24, 18, 14, 0.88);
+      --color-espresso-elevated: rgba(35, 26, 20, 0.92);
+      --color-border-subtle: rgba(212, 168, 83, 0.2);
+      --color-border-strong: rgba(212, 168, 83, 0.45);
+      --color-gold: #d4a853;
+      --color-gold-light: #ebd08b;
+      --color-gold-deep: #a97f32;
+      --color-cream: #f5efe6;
+      --color-cream-muted: #c8bca9;
+      --color-white: #ffffff;
+      --color-error-bg: rgba(153, 52, 42, 0.22);
+      --color-error-border: rgba(235, 118, 102, 0.5);
+      --color-error-text: #ffbfb5;
+      --color-success-bg: rgba(45, 106, 79, 0.28);
+      --color-success-border: rgba(116, 198, 157, 0.48);
+      --color-success-text: #c7f2db;
+
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+      --radius-card: 22px;
+      --radius-inner: 14px;
+      --radius-btn: 12px;
+      --transition-fast: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-smooth: 320ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--color-cream);
+      background-color: var(--color-black);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Full-bleed fixed background photography + measured contrast scrim */
+    .backdrop-layer {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background-color: var(--color-espresso);
+      background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(72, 48, 28, 0.45), transparent 70%),
+        var(--bg-image-url);
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      transform: scale(1.02);
+    }
+
+    .backdrop-scrim {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: linear-gradient(
+        180deg,
+        rgba(10, 8, 6, 0.78) 0%,
+        rgba(14, 10, 8, 0.82) 45%,
+        rgba(10, 8, 6, 0.92) 100%
+      );
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+    }
+
+    /* Page Container */
+    .page-shell {
+      width: 100%;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* Brand Header */
+    .brand-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 12px 8px 4px;
+      animation: fadeSlideDown 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .brand-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .brand-crest {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      color: var(--color-gold);
+    }
+
+    .brand-name-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .brand-name {
+      font-family: var(--font-display);
+      font-size: clamp(1.7rem, 4vw, 2.25rem);
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--color-white);
+      line-height: 1.05;
+    }
+
+    .brand-rule {
+      width: 100%;
+      height: 1px;
+      margin-top: 5px;
+      background: linear-gradient(90deg, var(--color-gold), rgba(212, 168, 83, 0.15));
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.25rem, 5.5vw, 3.35rem);
+      font-weight: 600;
+      line-height: 1.12;
+      color: var(--color-white);
+      text-wrap: balance;
+      margin-bottom: 10px;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(0.97rem, 2.2vw, 1.08rem);
+      color: var(--color-cream-muted);
+      max-width: 52ch;
+      text-wrap: balance;
+    }
+
+    /* Primary Surface Card */
+    .surface-card {
+      background: var(--color-espresso-card);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-card);
+      padding: 28px 24px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      animation: fadeSlideUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .section-divider {
+      border: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(212, 168, 83, 0.22), transparent);
+      margin: 26px 0;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .step-label {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 600;
+      color: var(--color-white);
+      letter-spacing: 0.01em;
+    }
+
+    .step-meta {
+      font-size: 0.84rem;
+      color: var(--color-cream-muted);
+    }
+
+    /* Star Rating Section */
+    .star-rating-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(8px, 2.5vw, 18px);
+      padding: 10px 0 8px;
+    }
+
+    .star-btn {
+      appearance: none;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      min-width: 50px;
+      min-height: 50px;
+      padding: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: rgba(245, 239, 230, 0.24);
+      transition: transform var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .star-btn:hover {
+      transform: translateY(-2px) scale(1.06);
+      background-color: rgba(212, 168, 83, 0.08);
+    }
+
+    .star-btn:active {
+      transform: scale(0.95);
+    }
+
+    .star-btn:focus-visible,
+    .keyword-btn:focus-visible,
+    .btn:focus-visible,
+    .text-btn:focus-visible,
+    .review-textarea:focus-visible {
+      outline: 2px solid var(--color-gold-light);
+      outline-offset: 2px;
+    }
+
+    .star-btn svg {
+      width: clamp(34px, 7vw, 44px);
+      height: clamp(34px, 7vw, 44px);
+      fill: currentColor;
+      transition: filter var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .star-btn.is-preview,
+    .star-btn.is-active {
+      color: var(--color-gold);
+    }
+
+    .star-btn.is-active svg {
+      filter: drop-shadow(0 0 10px rgba(212, 168, 83, 0.42));
+    }
+
+    .star-btn.is-selected-anchor {
+      border-color: rgba(212, 168, 83, 0.35);
+      background-color: rgba(212, 168, 83, 0.08);
+    }
+
+    .rating-feedback {
+      text-align: center;
+      min-height: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-top: 8px;
+      transition: opacity var(--transition-fast);
+    }
+
+    .rating-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--color-gold-light);
+      letter-spacing: 0.02em;
+    }
+
+    .rating-message {
+      font-size: 0.93rem;
+      color: var(--color-cream-muted);
+      max-width: 54ch;
+    }
+
+    /* Keywords Section */
+    .keywords-section {
+      display: none;
+      animation: fadeSlideUp var(--transition-smooth) both;
+    }
+
+    .keywords-section.is-visible {
+      display: block;
+    }
+
+    .keywords-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .keyword-btn {
+      appearance: none;
+      min-height: 44px;
+      padding: 10px 16px;
+      border-radius: var(--radius-btn);
+      border: 1px solid rgba(245, 239, 230, 0.16);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--color-cream);
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      font-weight: 500;
+      line-height: 1.25;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        color var(--transition-fast),
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast);
+    }
+
+    .keyword-btn:hover {
+      border-color: rgba(212, 168, 83, 0.55);
+      background: rgba(212, 168, 83, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .keyword-btn:active {
+      transform: scale(0.98);
+    }
+
+    .keyword-btn.is-selected {
+      background: linear-gradient(135deg, var(--color-gold-light), var(--color-gold));
+      border-color: var(--color-gold-light);
+      color: #16100a;
+      font-weight: 600;
+      box-shadow: 0 6px 18px rgba(212, 168, 83, 0.25);
+    }
+
+    .keyword-check {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      opacity: 0.45;
+      transition: opacity var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .keyword-btn.is-selected .keyword-check {
+      opacity: 1;
+    }
+
+    /* Validation & Feedback Alerts */
+    .alert-box {
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 15px;
+      border-radius: var(--radius-inner);
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-top: 18px;
+      animation: fadeSlideUp 0.2s ease-out both;
+    }
+
+    .alert-box.is-visible {
+      display: flex;
+    }
+
+    .alert-box.is-error {
+      background: var(--color-error-bg);
+      border: 1px solid var(--color-error-border);
+      color: var(--color-error-text);
+    }
+
+    .alert-box.is-success {
+      background: var(--color-success-bg);
+      border: 1px solid var(--color-success-border);
+      color: var(--color-success-text);
+    }
+
+    .alert-icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* Primary & Secondary Action Buttons */
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: var(--radius-btn);
+      min-height: 48px;
+      padding: 12px 22px;
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.2;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      white-space: nowrap;
+      transition:
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast),
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        opacity var(--transition-fast);
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+    }
+
+    .btn-primary-gold {
+      flex: 1 1 240px;
+      background: linear-gradient(135deg, #ebd08b 0%, #d4a853 55%, #b58734 100%);
+      color: #16100a;
+      box-shadow: 0 10px 26px rgba(212, 168, 83, 0.24);
+    }
+
+    .btn-primary-gold:hover:not(:disabled) {
+      box-shadow: 0 14px 32px rgba(212, 168, 83, 0.34);
+    }
+
+    .btn-outline-cream {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(245, 239, 230, 0.22);
+      color: var(--color-cream);
+    }
+
+    .btn-outline-cream:hover:not(:disabled) {
+      border-color: var(--color-gold);
+      background: rgba(212, 168, 83, 0.12);
+      color: var(--color-white);
+    }
+
+    .btn-ghost-reset {
+      background: transparent;
+      border-color: rgba(245, 239, 230, 0.14);
+      color: var(--color-cream-muted);
+      font-weight: 500;
+    }
+
+    .btn-ghost-reset:hover:not(:disabled) {
+      color: var(--color-white);
+      border-color: rgba(245, 239, 230, 0.35);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .btn-google {
+      width: 100%;
+      min-height: 52px;
+      background: var(--color-white);
+      color: #1a1612;
+      border-color: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+      font-size: 0.98rem;
+    }
+
+    .btn-google:hover {
+      background: var(--color-cream);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+    }
+
+    /* Loading State */
+    .loading-panel {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      padding: 28px 16px;
+      margin-top: 18px;
+      border-radius: var(--radius-inner);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(212, 168, 83, 0.22);
+    }
+
+    .loading-panel.is-visible {
+      display: flex;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2.5px solid rgba(212, 168, 83, 0.2);
+      border-top-color: var(--color-gold-light);
+      animation: spin 0.75s linear infinite;
+    }
+
+    .loading-text {
+      font-size: 0.92rem;
+      color: var(--color-cream-muted);
+    }
+
+    /* Review Preview Card */
+    .preview-section {
+      display: none;
+      animation: fadeSlideUp var(--transition-smooth) both;
+    }
+
+    .preview-section.is-visible {
+      display: block;
+    }
+
+    .preview-card {
+      background: var(--color-espresso-elevated);
+      border: 1px solid var(--color-border-strong);
+      border-radius: 18px;
+      padding: 22px 20px;
+    }
+
+    .preview-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .preview-heading {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--color-gold-light);
+    }
+
+    .preview-stars {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--color-gold);
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    .preview-stars svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .review-textarea {
+      width: 100%;
+      min-height: 136px;
+      padding: 15px 16px;
+      border-radius: var(--radius-inner);
+      border: 1px solid rgba(245, 239, 230, 0.16);
+      background: rgba(10, 8, 6, 0.65);
+      color: var(--color-white);
+      font-family: var(--font-sans);
+      font-size: 0.98rem;
+      line-height: 1.68;
+      resize: vertical;
+      transition: border-color var(--transition-fast);
+    }
+
+    .review-textarea:hover {
+      border-color: rgba(212, 168, 83, 0.42);
+    }
+
+    .edit-hint {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: var(--color-cream-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .draft-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .draft-actions .btn {
+      flex: 1 1 175px;
+    }
+
+    .google-post-block {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(212, 168, 83, 0.18);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .google-instruction {
+      text-align: center;
+      font-size: 0.88rem;
+      color: var(--color-cream-muted);
+      transition: color var(--transition-fast);
+    }
+
+    .google-instruction.is-highlighted {
+      color: var(--color-gold-light);
+      font-weight: 500;
+    }
+
+    /* Session Star Rating Distribution D3.js Card */
+    .insights-card {
+      padding: 24px 24px 22px;
+    }
+
+    .insights-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .insights-title {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 600;
+      color: var(--color-white);
+      line-height: 1.2;
+    }
+
+    .insights-subtitle {
+      font-size: 0.86rem;
+      color: var(--color-cream-muted);
+      margin-top: 3px;
+    }
+
+    .insights-stats {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.86rem;
+      color: var(--color-gold-light);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .text-btn {
+      appearance: none;
+      background: transparent;
+      border: none;
+      color: var(--color-cream-muted);
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+      min-height: 36px;
+      padding: 4px 6px;
+      transition: color var(--transition-fast);
+    }
+
+    .text-btn:hover {
+      color: var(--color-white);
+    }
+
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      min-height: 220px;
+    }
+
+    .chart-wrap svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+
+    .chart-empty-note {
+      text-align: center;
+      font-size: 0.86rem;
+      color: var(--color-cream-muted);
+      margin-top: 8px;
+    }
+
+    .chart-tooltip {
+      position: absolute;
+      pointer-events: none;
+      opacity: 0;
+      background: rgba(14, 10, 7, 0.96);
+      border: 1px solid var(--color-gold);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      color: var(--color-white);
+      white-space: nowrap;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+      transform: translate(-50%, -115%);
+      transition: opacity 140ms ease;
+      font-variant-numeric: tabular-nums;
+      z-index: 10;
+    }
+
+    /* Footer */
+    .site-footer {
+      text-align: center;
+      padding: 8px 12px 20px;
+      font-size: 0.92rem;
+      color: var(--color-cream-muted);
+      letter-spacing: 0.02em;
+    }
+
+    /* Animations */
+    @keyframes fadeSlideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Mobile Ergonomics */
+    @media (max-width: 600px) {
+      .page-shell {
+        padding: 18px 14px 36px;
+        gap: 20px;
+      }
+
+      .surface-card,
+      .insights-card {
+        padding: 22px 16px;
+        border-radius: 18px;
+      }
+
+      .preview-card {
+        padding: 18px 15px;
+      }
+
+      .actions-row,
+      .draft-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .star-rating-group {
+        gap: 6px;
+      }
+
+      .star-btn {
+        min-width: 46px;
+        min-height: 46px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Full-bleed background photography & dark contrast overlay -->
+  <div id="bg-photo" class="backdrop-layer" aria-hidden="true"></div>
+  <div class="backdrop-scrim" aria-hidden="true"></div>
+
+  <main class="page-shell">
+    <!-- Restaurant Branding & Hero Heading -->
+    <header class="brand-header">
+      <div class="brand-lockup">
+        <svg class="brand-crest" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="32" cy="32" r="29" stroke="currentColor" stroke-width="1.5" stroke-opacity="0.7" />
+          <circle cx="32" cy="32" r="24" stroke="currentColor" stroke-width="0.9" stroke-opacity="0.35" />
+          <path d="M23 18V30C23 32.5 24.8 34.4 27 34.8V46M27 18V27M31 18V30C31 32.5 29.2 34.4 27 34.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M40 18C40 18 43 22.5 43 28.5C43 32 41 34 40 34.5V46" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <div class="brand-name-wrap">
+          <span class="brand-name">DINE HOUSE</span>
+          <span class="brand-rule" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <h1 class="hero-title">How Was Your Experience?</h1>
+      <p class="hero-subtitle">We’d love to hear about your experience at Dine House.</p>
+    </header>
+
+    <!-- Main Review Builder Card -->
+    <section class="surface-card" aria-label="Guest review builder">
+      <!-- Step 1: Star Rating -->
+      <div>
+        <div class="step-header">
+          <h2 class="step-label">1. Rate Your Visit</h2>
+          <span class="step-meta" id="ratingStepMeta">Select 1 to 5 stars</span>
+        </div>
+
+        <div class="star-rating-group" role="radiogroup" aria-label="Star rating">
+          <button type="button" class="star-btn" data-rating="1" role="radio" aria-checked="false" aria-label="1 Star - Poor">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l2.92 5.92 6.53.95-4.72 4.6 1.11 6.5L12 17.3l-5.84 3.07 1.11-6.5-4.72-4.6 6.53-.95L12 2.4z"/></svg>
+          </button>
+          <button type="button" class="star-btn" data-rating="2" role="radio" aria-checked="false" aria-label="2 Stars - Fair">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l2.92 5.92 6.53.95-4.72 4.6 1.11 6.5L12 17.3l-5.84 3.07 1.11-6.5-4.72-4.6 6.53-.95L12 2.4z"/></svg>
+          </button>
+          <button type="button" class="star-btn" data-rating="3" role="radio" aria-checked="false" aria-label="3 Stars - Good">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l2.92 5.92 6.53.95-4.72 4.6 1.11 6.5L12 17.3l-5.84 3.07 1.11-6.5-4.72-4.6 6.53-.95L12 2.4z"/></svg>
+          </button>
+          <button type="button" class="star-btn" data-rating="4" role="radio" aria-checked="false" aria-label="4 Stars - Very Good">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l2.92 5.92 6.53.95-4.72 4.6 1.11 6.5L12 17.3l-5.84 3.07 1.11-6.5-4.72-4.6 6.53-.95L12 2.4z"/></svg>
+          </button>
+          <button type="button" class="star-btn" data-rating="5" role="radio" aria-checked="false" aria-label="5 Stars - Excellent">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l2.92 5.92 6.53.95-4.72 4.6 1.11 6.5L12 17.3l-5.84 3.07 1.11-6.5-4.72-4.6 6.53-.95L12 2.4z"/></svg>
+          </button>
+        </div>
+
+        <div class="rating-feedback" aria-live="polite">
+          <div class="rating-title" id="ratingTitle">Tap a star above to begin</div>
+          <p class="rating-message" id="ratingMessage">Your honest feedback helps our kitchen and hospitality team keep improving.</p>
+        </div>
+      </div>
+
+      <!-- Step 2: Dynamic Keywords -->
+      <div id="keywordsSection" class="keywords-section">
+        <hr class="section-divider" />
+        <div class="step-header">
+          <h2 class="step-label">2. What Stood Out?</h2>
+          <span class="step-meta" id="keywordCountMeta">Choose one or more highlights</span>
+        </div>
+        <div id="keywordsGrid" class="keywords-grid" role="group" aria-label="Experience highlights"></div>
+      </div>
+
+      <!-- Validation Error Alert -->
+      <div id="errorAlert" class="alert-box is-error" role="alert" aria-live="assertive">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span id="errorAlertText">Please select a star rating and at least one keyword.</span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="actions-row">
+        <button type="button" id="generateBtn" class="btn btn-primary-gold">
+          Generate My Review
+        </button>
+        <button type="button" id="resetBtn" class="btn btn-ghost-reset">
+          Clear Selection
+        </button>
+      </div>
+
+      <!-- Loading Indicator -->
+      <div id="loadingPanel" class="loading-panel" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="loading-text" id="loadingText">Crafting a natural review draft...</p>
+      </div>
+
+      <!-- Step 3: Editable Review Preview & Share -->
+      <div id="previewSection" class="preview-section">
+        <hr class="section-divider" />
+        <div class="preview-card">
+          <div class="preview-top">
+            <h3 class="preview-heading">Your Review Draft</h3>
+            <div class="preview-stars" id="previewStars" aria-label="Selected rating"></div>
+          </div>
+
+          <label for="reviewTextarea" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">
+            Editable review draft
+          </label>
+          <textarea id="reviewTextarea" class="review-textarea" rows="5" placeholder="Your generated review will appear here..."></textarea>
+
+          <div class="edit-hint">
+            <span>Feel free to personalize the text above before copying.</span>
+            <span id="draftCounterMeta">Draft #1</span>
+          </div>
+
+          <!-- Copy Success Banner -->
+          <div id="copySuccessAlert" class="alert-box is-success" role="status" aria-live="polite">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span>Review copied successfully!</span>
+          </div>
+
+          <div class="draft-actions">
+            <button type="button" id="copyBtn" class="btn btn-primary-gold">
+              📋 Copy Review
+            </button>
+            <button type="button" id="downloadTxtBtn" class="btn btn-outline-cream">
+              Download as Text File
+            </button>
+            <button type="button" id="newDraftBtn" class="btn btn-outline-cream">
+              ↻ Generate New Draft
+            </button>
+          </div>
+
+          <div class="google-post-block">
+            <a id="googleReviewBtn" class="btn btn-google" href="#" target="_blank" rel="noopener noreferrer">
+              ⭐ Post Your Review on Google
+            </a>
+            <p id="googleInstruction" class="google-instruction">
+              Copy your review first, then paste it on Google to share your experience.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- D3.js Session Star Rating Distribution Bar Chart -->
+    <section class="surface-card insights-card" aria-label="Session star rating distribution">
+      <div class="insights-header">
+        <div>
+          <h2 class="insights-title">Session Rating Distribution</h2>
+          <p class="insights-subtitle">Star ratings collected during this browser session</p>
+        </div>
+        <div class="insights-stats">
+          <span id="chartSummaryText">0 ratings · — avg</span>
+          <button type="button" id="clearChartBtn" class="text-btn">Reset Chart</button>
+        </div>
+      </div>
+
+      <div id="d3ChartContainer" class="chart-wrap" role="img" aria-label="Bar chart showing star rating distribution from 1 to 5 stars">
+        <div id="chartTooltip" class="chart-tooltip"></div>
+      </div>
+      <p id="chartEmptyNote" class="chart-empty-note">
+        Generate a review above to record a rating and watch the live distribution update.
+      </p>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      Thank you for choosing Dine House ❤️
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // OWNER CONFIGURATION — CHANGE BACKGROUND IMAGE & GOOGLE REVIEW LINK HERE
+      // =========================================================================
+      const RESTAURANT_CONFIG = {
+        restaurantName: 'Dine House',
+        // Replace with your own hosted image path or URL to change the background photo:
+        backgroundImageUrl: '/src/assets/images/dine_house_backdrop_1795517749233.jpg',
+        // Replace with your restaurant's official Google Review URL (e.g. from Google Business Profile):
+        googleReviewUrl: 'https://search.google.com/local/writereview?placeid=YOUR_PLACE_ID_HERE'
+      };
+
+      // =========================================================================
+      // OPTIONAL EXTERNAL AI API HOOK (NOT ACTIVE BY DEFAULT)
+      // This standalone version uses the built-in multi-style variety engine.
+      // If you later add a backend proxy endpoint (e.g. /api/generate-review),
+      // you can plug it into this async function and call it before falling back.
+      // =========================================================================
+      async function generateReviewWithExternalAI(/* rating, keywords */) {
+        // Example integration structure:
+        // const res = await fetch('/api/generate-review', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify({ restaurant: RESTAURANT_CONFIG.restaurantName, rating, keywords })
+        // });
+        // if (!res.ok) throw new Error('API request failed');
+        // const data = await res.json();
+        // return data.reviewText;
+        return null;
+      }
+
+      // =========================================================================
+      // RATING METADATA & KEYWORD CATEGORIES
+      // =========================================================================
+      const RATING_DATA = {
+        1: {
+          label: '1 Star – Poor',
+          shortLabel: 'Poor',
+          message: 'We’re truly sorry your visit fell short. Select what went wrong so we can address it.',
+          keywords: [
+            'Slow Service',
+            'Unfriendly Staff',
+            'Poor Food Quality',
+            'Unclean Environment',
+            'Long Waiting Time',
+            'Disappointing Experience',
+            'High Prices',
+            'Needs Improvement'
+          ]
+        },
+        2: {
+          label: '2 Stars – Fair',
+          shortLabel: 'Fair',
+          message: 'Thank you for sharing candid feedback. Highlight the areas that felt underwhelming.',
+          keywords: [
+            'Average Food',
+            'Slow Service',
+            'Limited Menu',
+            'Average Taste',
+            'Needs Improvement',
+            'Could Be Better',
+            'Pricey Experience',
+            'Staff Improvement'
+          ]
+        },
+        3: {
+          label: '3 Stars – Good',
+          shortLabel: 'Good',
+          message: 'We appreciate you dining with us. Pick what worked well and where we can grow.',
+          keywords: [
+            'Good Food',
+            'Decent Service',
+            'Nice Ambience',
+            'Reasonable Prices',
+            'Good Portions',
+            'Comfortable Seating',
+            'Satisfactory Experience',
+            'Room for Improvement'
+          ]
+        },
+        4: {
+          label: '4 Stars – Very Good',
+          shortLabel: 'Very Good',
+          message: 'Glad you had a lovely time at Dine House. Choose the highlights from your visit.',
+          keywords: [
+            'Delicious Food',
+            'Friendly Staff',
+            'Great Ambience',
+            'Quick Service',
+            'Fresh Ingredients',
+            'Good Presentation',
+            'Worth the Price',
+            'Enjoyable Experience',
+            'Clean Restaurant'
+          ]
+        },
+        5: {
+          label: '5 Stars – Excellent',
+          shortLabel: 'Excellent',
+          message: 'We’re thrilled you loved your time with us! Select everything that stood out.',
+          keywords: [
+            'Amazing Food',
+            'Excellent Service',
+            'Beautiful Ambience',
+            'Friendly Staff',
+            'Must-Try Dishes',
+            'Great Hospitality',
+            'Delicious Desserts',
+            'Perfect Dining Experience',
+            'Value for Money',
+            'Highly Recommended',
+            'Will Visit Again',
+            'Family Friendly'
+          ]
+        }
+      };
+
+      // =========================================================================
+      // NATURAL PHRASING BANK FOR HUMAN-SOUNDING CLAUSES
+      // Each keyword maps to multiple natural, everyday clauses so drafts never
+      // sound like robotic keyword stuffing.
+      // =========================================================================
+      const KEYWORD_CLAUSES = {
+        // 1-Star Keywords
+        'Slow Service': [
+          'the service moved pretty slowly',
+          'getting attention from the floor took much longer than it should have',
+          'the pace of service felt sluggish throughout the meal',
+          'we spent a lot of time waiting on basic table service'
+        ],
+        'Unfriendly Staff': [
+          'the staff came across a bit cold and uninterested',
+          'warm hospitality was noticeably missing at the table',
+          'interactions with the team felt abrupt rather than welcoming',
+          'we didn’t really feel looked after by the staff'
+        ],
+        'Poor Food Quality': [
+          'the food itself missed the mark on quality',
+          'what arrived at the table wasn’t up to the standard we expected',
+          'the dishes fell flat in both flavor and execution',
+          'the kitchen seemed off on quality during our visit'
+        ],
+        'Unclean Environment': [
+          'the dining area didn’t feel as clean or tidy as it ought to be',
+          'cleanliness around the tables and space needed real attention',
+          'the upkeep of the dining room left a poor impression',
+          'a few areas didn’t look properly wiped down or maintained'
+        ],
+        'Long Waiting Time': [
+          'the wait before anything arrived stretched on way too long',
+          'we ended up waiting far longer than expected',
+          'wait times threw off the whole flow of the meal',
+          'it took an unexpectedly long stretch just to get served'
+        ],
+        'Disappointing Experience': [
+          'the visit left us feeling pretty let down',
+          'things didn’t live up to what we were hoping for',
+          'it turned out to be a frustrating meal compared to expectations',
+          'we walked out feeling disappointed with how the visit went'
+        ],
+        'High Prices': [
+          'the bill felt steep for what actually landed on the table',
+          'pricing felt hard to justify given how things went',
+          'for the prices charged, the experience didn’t add up',
+          'the cost felt high compared to the value we received'
+        ],
+        'Needs Improvement': [
+          'there are clearly several basics that need tightening up',
+          'a few core details need real attention from management',
+          'the place has clear room to get the fundamentals right',
+          'some steady improvements would make a huge difference here'
+        ],
+
+        // 2-Star Keywords
+        'Average Food': [
+          'the food was mostly just average',
+          'nothing on the plate was bad, though nothing really stood out either',
+          'the dishes felt fairly ordinary from start to finish',
+          'the kitchen put out passable food without much spark'
+        ],
+        'Limited Menu': [
+          'the menu felt quite limited with fewer choices than expected',
+          'there weren’t many options to pick from on the menu',
+          'having a slightly broader selection would have helped',
+          'the menu variety felt a bit narrow'
+        ],
+        'Average Taste': [
+          'flavors leaned pretty plain and middle-of-the-road',
+          'the seasoning and taste felt just okay rather than memorable',
+          'taste-wise, everything landed firmly in average territory',
+          'the dishes lacked that extra depth of flavor'
+        ],
+        'Could Be Better': [
+          'with a bit more care, the whole meal could have been much stronger',
+          'it felt like the place could easily deliver a better visit',
+          'several small touches could have lifted the evening',
+          'things were fine in spots, yet clearly could be better'
+        ],
+        'Pricey Experience': [
+          'the pricing felt a little on the high side for what we got',
+          'it felt somewhat pricey considering how ordinary the meal was',
+          'the check felt slightly steep for a middling visit',
+          'value felt a bit off relative to the menu prices'
+        ],
+        'Staff Improvement': [
+          'the staff could definitely be a bit more attentive and warm',
+          'stronger communication from the floor team would go a long way',
+          'service felt a little unpolished and could use better coordination',
+          'a little extra attentiveness from the team would help a lot'
+        ],
+
+        // 3-Star Keywords
+        'Good Food': [
+          'the food was solid and enjoyable',
+          'our plates came out tasty and well prepared',
+          'we liked what we ordered from the kitchen',
+          'the cooking hit the spot nicely'
+        ],
+        'Decent Service': [
+          'service was polite and got the job done',
+          'the team checked on us steadily without any major hiccups',
+          'our server kept things moving along comfortably',
+          'service was decent and pleasant enough'
+        ],
+        'Nice Ambience': [
+          'the dining room had a relaxed, pleasant vibe',
+          'the atmosphere inside made it easy to settle in',
+          'the setting felt warm and inviting',
+          'lighting and decor gave the space a nice mood'
+        ],
+        'Reasonable Prices': [
+          'prices felt fair for the neighborhood and setting',
+          'the bill was pretty reasonable for what we had',
+          'menu pricing felt sensible and approachable',
+          'nothing felt overpriced on the check'
+        ],
+        'Good Portions': [
+          'portion sizes were generous enough to leave us satisfied',
+          'the servings were well balanced and filling',
+          'plates came with plenty of food',
+          'portions felt right for a proper meal'
+        ],
+        'Comfortable Seating': [
+          'the seating was comfortable and gave us room to relax',
+          'our table felt cozy and easy to sit at for a while',
+          'the chairs and table spacing made dining comfortable',
+          'it was an easy, comfortable spot to sit and catch up'
+        ],
+        'Satisfactory Experience': [
+          'it made for a pleasant, no-fuss meal',
+          'everything went smoothly enough for a good casual outing',
+          'we left satisfied with how the visit turned out',
+          'it was a dependable, straightforward dining stop'
+        ],
+        'Room for Improvement': [
+          'a few small details still have room to be sharpened up',
+          'tweaking a couple of little things could take it up another notch',
+          'it’s a good spot that could be even stronger with minor polish',
+          'there’s a bit of room to elevate the visit further'
+        ],
+
+        // 4-Star Keywords
+        'Delicious Food': [
+          'every dish we ordered had rich, satisfying flavor',
+          'the kitchen really delivered on taste and seasoning',
+          'our meal tasted fresh, flavorful, and well balanced',
+          'we really enjoyed every bite that came to the table'
+        ],
+        'Friendly Staff': [
+          'the team greeted us warmly and kept a genuinely kind attitude',
+          'everyone taking care of our table was friendly and easy to talk to',
+          'the staff brought a welcoming energy that made us feel right at home',
+          'our servers were cheerful, patient, and approachable'
+        ],
+        'Great Ambience': [
+          'the atmosphere had a cozy, upscale charm without feeling stiff',
+          'the space felt lively yet comfortable enough for real conversation',
+          'warm lighting and thoughtful decor set a great tone',
+          'the ambience made it easy to linger over dinner'
+        ],
+        'Quick Service': [
+          'food arrived promptly without making us feel rushed',
+          'the kitchen and servers kept a brisk, smooth pace',
+          'we didn’t have to wait long at all between courses',
+          'service was quick, attentive, and well timed'
+        ],
+        'Fresh Ingredients': [
+          'you could really tell the ingredients were fresh',
+          'the produce and components on the plate tasted crisp and vibrant',
+          'freshness came through clearly in every dish',
+          'nothing tasted pre-made—the ingredients felt genuinely fresh'
+        ],
+        'Good Presentation': [
+          'the plating looked neat and appetizing when it arrived',
+          'care clearly went into how every dish was presented',
+          'the food looked just as good as it tasted',
+          'each plate came out thoughtfully arranged'
+        ],
+        'Worth the Price': [
+          'for the quality on the table, the bill felt completely fair',
+          'it felt well worth what we paid',
+          'you definitely get solid value for the price here',
+          'the cost matched the quality of the evening nicely'
+        ],
+        'Enjoyable Experience': [
+          'we had a really pleasant time from start to finish',
+          'the whole outing felt smooth and genuinely enjoyable',
+          'it turned out to be a great spot to unwind over a meal',
+          'we left in high spirits after a lovely meal'
+        ],
+        'Clean Restaurant': [
+          'the dining room and tables were spotless throughout',
+          'everything looked clean, crisp, and well kept',
+          'the attention to cleanliness stood out right away',
+          'the restaurant felt tidy and carefully maintained'
+        ],
+
+        // 5-Star Keywords
+        'Amazing Food': [
+          'the food truly stole the show—every plate was memorable',
+          'the kitchen knocked it out of the park on flavor and balance',
+          'every bite felt thoughtfully crafted and deeply flavorful',
+          'the quality of the cooking stood out from the very first plate'
+        ],
+        'Excellent Service': [
+          'the service was attentive without ever hovering',
+          'our table was looked after seamlessly from arrival to the check',
+          'the team anticipated what we needed before we even asked',
+          'service ran like clockwork while still feeling personal'
+        ],
+        'Beautiful Ambience': [
+          'the dining room looks gorgeous, with warm lighting and a welcoming glow',
+          'the setting strikes a lovely balance between refined and comfortable',
+          'the atmosphere immediately sets a special mood the moment you step in',
+          'every corner of the room feels thoughtfully designed and inviting'
+        ],
+        'Must-Try Dishes': [
+          'there are several standout plates here that feel like genuine must-tries',
+          'a couple of the dishes we had are worth coming back for on their own',
+          'the menu has clear standouts you shouldn’t skip',
+          'what we ordered easily earned a spot on our favorites list'
+        ],
+        'Great Hospitality': [
+          'the hospitality felt warm, genuine, and unhurried',
+          'you can tell the team truly cares about how guests feel here',
+          'from the door to the table, the warmth of the hospitality stood out',
+          'they treated us like welcome guests rather than just another table'
+        ],
+        'Delicious Desserts': [
+          'saving room for dessert turned out to be the smartest call of the night',
+          'the desserts wrapped up the meal on a wonderful note',
+          'finishing with dessert made the whole meal feel complete',
+          'do not skip the sweet side of the menu—it was a highlight'
+        ],
+        'Perfect Dining Experience': [
+          'everything clicked together seamlessly from start to finish',
+          'it’s rare for food, pacing, and mood to align this well',
+          'the whole visit unfolded effortlessly without a single misstep',
+          'it felt like the kind of meal you remember well after leaving'
+        ],
+        'Value for Money': [
+          'for the caliber of cooking and care, the value is genuinely impressive',
+          'the quality you get for the price makes it an easy favorite',
+          'every dollar on the bill felt completely justified',
+          'rarely do quality and fair pricing meet this well'
+        ],
+        'Highly Recommended': [
+          'I wouldn’t hesitate to point friends toward this place',
+          'it’s easily a spot I’ll be telling people about',
+          'if you’re looking for a great meal nearby, put this on your list',
+          'friends asking for dinner ideas are definitely hearing about this spot'
+        ],
+        'Will Visit Again': [
+          'we’re already looking forward to coming back soon',
+          'this easily earned a return visit from us',
+          'we’ll definitely be back for another table before long',
+          'already planning our next stop here'
+        ],
+        'Family Friendly': [
+          'it’s welcoming and comfortable enough for a relaxed family meal',
+          'our whole group, across ages, felt completely at ease here',
+          'it works wonderfully for a family dinner without feeling fussy',
+          'families will feel right at home with the warm, relaxed vibe'
+        ]
+      };
+
+      // =========================================================================
+      // HELPER UTILITIES
+      // =========================================================================
+      function pickRandom(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+      function shuffleArray(arr) {
+        const copy = arr.slice();
+        for (let i = copy.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = copy[i];
+          copy[i] = copy[j];
+          copy[j] = tmp;
+        }
+        return copy;
+      }
+
+      function capitalizeFirst(str) {
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }
+
+      function getClause(keyword) {
+        const options = KEYWORD_CLAUSES[keyword];
+        if (options && options.length) {
+          return pickRandom(options);
+        }
+        return keyword.toLowerCase();
+      }
+
+      function selectFocusKeywords(keywords) {
+        const shuffled = shuffleArray(keywords);
+        if (shuffled.length <= 4) return shuffled;
+        // Pick 3 to 5 highlights naturally so sentences never sound overcrowded
+        const targetCount = Math.min(shuffled.length, 3 + Math.floor(Math.random() * 3));
+        return shuffled.slice(0, targetCount);
+      }
+
+      function joinNaturalClauses(clauses) {
+        if (clauses.length === 0) return '';
+        if (clauses.length === 1) return capitalizeFirst(clauses[0]) + '.';
+        if (clauses.length === 2) {
+          const joiners = [', and ', '; also, ', '. On top of that, '];
+          const joiner = pickRandom(joiners);
+          if (joiner.startsWith('.')) {
+            return capitalizeFirst(clauses[0]) + joiner + clauses[1] + '.';
+          }
+          return capitalizeFirst(clauses[0]) + joiner + clauses[1] + '.';
+        }
+        // 3+ clauses split into distinct sentences so they breathe naturally
+        const firstSentence = capitalizeFirst(clauses[0]) + '.';
+        const rest = clauses.slice(1);
+        if (rest.length === 1) {
+          return firstSentence + ' ' + capitalizeFirst(rest[0]) + '.';
+        }
+        const mid = capitalizeFirst(rest[0]) + ', and ' + rest[1] + '.';
+        if (rest.length > 2) {
+          const extra = rest.slice(2).map(function (c) {
+            return capitalizeFirst(c) + '.';
+          }).join(' ');
+          return firstSentence + ' ' + mid + ' ' + extra;
+        }
+        return firstSentence + ' ' + mid;
+      }
+
+      // =========================================================================
+      // MULTI-STYLE HUMAN REVIEW GENERATION ENGINE
+      // 8 distinct writing archetypes with different openings, structures, tones,
+      // and closings—never reusing banned robotic phrases.
+      // =========================================================================
+      const REVIEW_STYLES = [
+        // 1. Short casual mobile-style note
+        function styleShortCasual(rating, keywords) {
+          const focus = selectFocusKeywords(keywords).slice(0, 3);
+          const clauses = focus.map(getClause);
+          const openings = {
+            1: ['Stopped by Dine House recently and honestly left frustrated.', 'Tried Dine House the other day, and it was a rough visit.', 'Visited Dine House this week and ran into a few real issues.'],
+            2: ['Ate at Dine House recently and came away with mixed feelings.', 'Checked out Dine House recently, though it felt a bit underwhelming.', 'Had a meal at Dine House the other day—just okay all around.'],
+            3: ['Stopped into Dine House for a meal and had a solid time.', 'Tried Dine House recently and thought it was pretty good.', 'Dined at Dine House the other day—a nice, straightforward visit.'],
+            4: ['Had dinner at Dine House recently and really enjoyed it.', 'Stopped by Dine House and came away very happy with our meal.', 'Visited Dine House the other night and had a great time.'],
+            5: ['Dropped into Dine House recently and loved every minute of it.', 'Dined at Dine House this week and couldn’t have been happier.', 'Had a meal at Dine House recently—easily one of our best outings lately.']
+          };
+          const tail = {
+            1: ['Hopefully they get things sorted out soon.', 'Hard to recommend based on this visit, unfortunately.', 'Hope management takes a look at these points.'],
+            2: ['Has potential, just needs a bit more consistency.', 'Not terrible, though there’s definite room to tighten things up.', 'Might try again down the road if things sharpen up.'],
+            3: ['A nice dependable spot when you’re nearby.', 'Glad we stopped in.', 'Worth checking out for a relaxed meal.'],
+            4: ['Glad we chose Dine House for the evening.', 'Would gladly stop back in soon.', 'A really enjoyable spot to spend an evening.'],
+            5: ['Already thinking about our next table here.', 'Couldn’t ask for much more from a night out.', 'Easily one of our favorite local finds.']
+          };
+          return pickRandom(openings[rating]) + ' ' + joinNaturalClauses(clauses) + ' ' + pickRandom(tail[rating]);
+        },
+
+        // 2. Conversational personal narrative
+        function styleConversational(rating, keywords) {
+          const focus = selectFocusKeywords(keywords);
+          const clauses = focus.map(getClause);
+          const leadIn = {
+            1: ['We decided to give Dine House a try, but things started off on the wrong foot.', 'Came to Dine House hoping for a nice meal, though the visit never quite came together.', 'Our trip to Dine House didn’t go nearly as smoothly as we’d hoped.'],
+            2: ['We’d been meaning to try Dine House, and while parts of the visit were fine, it didn’t quite click.', 'Stopped into Dine House without big expectations, and it ended up feeling fairly middle-of-the-road.', 'We sat down at Dine House for a quiet meal, though a few things held it back.'],
+            3: ['We picked Dine House for a casual meal and had a comfortable time.', 'Stopped in at Dine House while in the area, and things went nicely for the most part.', 'Tried Dine House for the first time and left feeling pretty content.'],
+            4: ['We booked a table at Dine House and had a really lovely evening together.', 'Picked Dine House for dinner out, and it turned out to be a great call.', 'Came into Dine House with friends and genuinely enjoyed how the night unfolded.'],
+            5: ['We chose Dine House for a night out, and it exceeded every hope we had walking in.', 'Had been hearing good things about Dine House, and our visit lived up to every bit of it.', 'From the moment we walked into Dine House, the whole evening felt special.']
+          };
+          const connectors = ['On top of that, ', 'Beyond that, ', 'I also noticed ', 'Another thing was that '];
+          let body = '';
+          if (clauses.length === 1) {
+            body = capitalizeFirst(clauses[0]) + '.';
+          } else {
+            body = capitalizeFirst(clauses[0]) + '. ' + pickRandom(connectors) + clauses[1] + '.';
+            if (clauses.length >= 3) {
+              body += ' ' + joinNaturalClauses(clauses.slice(2));
+            }
+          }
+          const closer = {
+            1: ['Sharing this honestly in hopes the team fixes these gaps.', 'Just wanted to leave candid feedback so future guests have a better time.'],
+            2: ['With a couple of adjustments, it could easily be a much stronger visit.', 'Not a bad place—just feels like it’s missing a little polish.'],
+            3: ['Nothing flashy, just a comfortable spot that gets the basics right.', 'Would consider coming back again when we’re in the mood for something easygoing.'],
+            4: ['Left full and happy—definitely glad we came.', 'It’s the kind of reliable spot you feel good about returning to.'],
+            5: ['Can’t wait to bring more friends along next time.', 'Rare to walk out feeling this satisfied with every detail.']
+          };
+          return pickRandom(leadIn[rating]) + ' ' + body + ' ' + pickRandom(closer[rating]);
+        },
+
+        // 3. Direct & practical feedback (no fluff)
+        function styleConciseDirect(rating, keywords) {
+          const focus = selectFocusKeywords(keywords).slice(0, 4);
+          const clauses = focus.map(getClause);
+          const first = capitalizeFirst(clauses[0]);
+          const prefix = {
+            1: 'At Dine House, ',
+            2: 'During our meal at Dine House, ',
+            3: 'At Dine House, ',
+            4: 'Dining at Dine House, ',
+            5: 'At Dine House, '
+          };
+          const opening = prefix[rating] + clauses[0] + '.';
+          const middle = clauses.length > 1 ? ' ' + joinNaturalClauses(clauses.slice(1)) : '';
+          const ending = {
+            1: ' All in all, it was a disappointing stop that needs work.',
+            2: ' It’s an okay option in a pinch, though a bit uneven.',
+            3: ' A good, steady dining choice that does the essentials well.',
+            4: ' Really solid across the board—we’d happily return.',
+            5: ' Truly top-notch in every area that matters.'
+          };
+          return opening + middle + ending[rating];
+        },
+
+        // 4. First-person reflective tone
+        function styleReflective(rating, keywords) {
+          const focus = selectFocusKeywords(keywords);
+          const clauses = focus.map(getClause);
+          const intros = {
+            1: ['I rarely leave critical notes, but my visit to Dine House was genuinely frustrating.', 'Leaving honest feedback about Dine House after a pretty underwhelming stop.'],
+            2: ['My meal at Dine House had a few okay moments, though I walked away feeling it fell short.', 'Tried Dine House earlier this week and wanted to share a fair take.'],
+            3: ['My visit to Dine House was pleasant and unhurried.', 'Stopped by Dine House for lunch and left feeling satisfied.'],
+            4: ['I had a genuinely great time eating at Dine House.', 'Really glad I finally made it over to Dine House.'],
+            5: ['I haven’t enjoyed a meal out this much in a long time—Dine House really impressed me.', 'Dine House reminded me what great dining feels like when every detail comes together.']
+          };
+          const transitions = {
+            1: ['Mostly, ', 'What stood out—unfortunately—was that '],
+            2: ['For me, ', 'Specifically, '],
+            3: ['I liked that ', 'What made it nice was that '],
+            4: ['Right away, ', 'What stood out most was that '],
+            5: ['From the start, ', 'More than anything, ']
+          };
+          const firstClause = pickRandom(transitions[rating]) + clauses[0] + '.';
+          const rest = clauses.length > 1 ? ' ' + joinNaturalClauses(clauses.slice(1)) : '';
+          return pickRandom(intros[rating]) + ' ' + firstClause + rest;
+        },
+
+        // 5. Quick two-sentence punchy take
+        function styleQuickTake(rating, keywords) {
+          const focus = shuffleArray(keywords).slice(0, 2);
+          const c1 = getClause(focus[0]);
+          const c2 = focus[1] ? getClause(focus[1]) : null;
+          if (!c2) {
+            const singleTail = {
+              1: 'Left Dine House wishing the visit had gone much better.',
+              2: 'Dine House felt pretty average during our stop.',
+              3: 'Had a good, comfortable meal at Dine House.',
+              4: 'Really enjoyed our evening at Dine House.',
+              5: 'Dine House delivered a truly memorable evening from start to finish.'
+            };
+            return capitalizeFirst(c1) + '. ' + singleTail[rating];
+          }
+          const templates = {
+            1: [
+              `Our stop at Dine House missed the mark—${c1}, and ${c2}. Hoping they turn things around soon.`,
+              `Unfortunately, ${c1} during our visit to Dine House. On top of that, ${c2}.`
+            ],
+            2: [
+              `Tried Dine House recently: ${c1}, though ${c2}. Has room to improve.`,
+              `Dine House was just okay for us—${c1}, and ${c2}.`
+            ],
+            3: [
+              `Had a good visit to Dine House where ${c1} and ${c2}. Solid local spot.`,
+              `Dine House made for an easygoing meal—${c1}, plus ${c2}.`
+            ],
+            4: [
+              `Really liked Dine House—${c1}, and ${c2}. Definitely worth stopping in.`,
+              `Great night at Dine House! ${capitalizeFirst(c1)}, and ${c2}.`
+            ],
+            5: [
+              `Dine House nailed it—${c1}, and ${c2}. Can’t wait to go back.`,
+              `Loved our meal at Dine House. ${capitalizeFirst(c1)}, plus ${c2}.`
+            ]
+          };
+          return pickRandom(templates[rating]);
+        },
+
+        // 6. Guest-to-guest recommendation / heads-up style
+        function styleGuestNote(rating, keywords) {
+          const focus = selectFocusKeywords(keywords);
+          const clauses = focus.map(getClause);
+          const openers = {
+            1: ['If you’re considering Dine House, our recent visit was pretty rough.', 'Sharing a quick heads-up after dining at Dine House.'],
+            2: ['For anyone curious about Dine House, our visit landed somewhere in the middle.', 'A quick honest note on our recent meal at Dine House.'],
+            3: ['If you’re looking for a laid-back meal, Dine House is a decent choice.', 'Stopped into Dine House and thought it was a nice, reliable spot.'],
+            4: ['If Dine House is on your list, it’s definitely worth booking a table.', 'Really pleased we finally tried Dine House.'],
+            5: ['If you haven’t been to Dine House yet, move it straight to the top of your list.', 'Hands down one of the nicest dining experiences we’ve had at Dine House.']
+          };
+          const wrap = {
+            1: ['Hopefully this feedback helps them improve for future tables.', 'Just didn’t feel up to par this time around.'],
+            2: ['Could easily be better with a little more care.', 'Worth noting before you go.'],
+            3: ['Nothing over the top, just a pleasant place to eat.', 'Good option for a casual dinner.'],
+            4: ['Everything came together nicely for a great evening.', 'Looking forward to visiting again.'],
+            5: ['You can feel the care behind every part of the evening.', 'We’ll be back very soon.']
+          };
+          return pickRandom(openers[rating]) + ' ' + joinNaturalClauses(clauses) + ' ' + pickRandom(wrap[rating]);
+        },
+
+        // 7. Sensory & pacing style
+        function stylePacing(rating, keywords) {
+          const focus = selectFocusKeywords(keywords);
+          const clauses = focus.map(getClause);
+          const first = clauses[0];
+          const rest = clauses.slice(1);
+          const frames = {
+            1: `Walking into Dine House, we hoped for a relaxing meal, yet ${first}.`,
+            2: `Our meal at Dine House moved along unevenly—${first}.`,
+            3: `Settling in at Dine House felt comfortable, and ${first}.`,
+            4: `From our first few minutes at Dine House, ${first}.`,
+            5: `Everything at Dine House flowed effortlessly, starting with how ${first}.`
+          };
+          const tail = rest.length ? ' ' + joinNaturalClauses(rest) : '';
+          const enders = {
+            1: ' Definitely needs attention.',
+            2: ' A little more consistency would make a real difference.',
+            3: ' A good, pleasant stop.',
+            4: ' We left very glad we came.',
+            5: ' Truly a standout place to dine.'
+          };
+          return frames[rating] + tail + enders[rating];
+        },
+
+        // 8. Balanced summary note
+        function styleBalancedSummary(rating, keywords) {
+          const focus = selectFocusKeywords(keywords);
+          const clauses = focus.map(getClause);
+          const heads = {
+            1: ['Honest feedback from our recent table at Dine House:', 'Our visit to Dine House left a lot to be desired.'],
+            2: ['Just wrapped up a meal at Dine House.', 'Mixed takeaways from our meal at Dine House.'],
+            3: ['Had a pleasant meal at Dine House.', 'Good, steady evening at Dine House.'],
+            4: ['Thoroughly enjoyed our dinner at Dine House.', 'Such a warm, enjoyable meal at Dine House.'],
+            5: ['What a fantastic evening at Dine House.', 'Dine House truly impressed us from start to finish.']
+          };
+          return pickRandom(heads[rating]) + ' ' + joinNaturalClauses(clauses);
+        }
+      ];
+
+      // =========================================================================
+      // APPLICATION STATE
+      // =========================================================================
+      const SESSION_STORAGE_KEY = 'dineHouseSessionRatings_v1';
+
+      const state = {
+        selectedRating: 0,
+        hoveredRating: 0,
+        selectedKeywords: new Set(),
+        generatedHistory: new Set(),
+        lastStyleIndex: -1,
+        draftCount: 0,
+        isGenerating: false,
+        hasCopiedCurrentDraft: false,
+        // Array of ratings [1..5] collected in this browser session
+        sessionRatings: loadSessionRatings()
+      };
+
+      function loadSessionRatings() {
+        try {
+          const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(function (n) {
+              return Number.isInteger(n) && n >= 1 && n <= 5;
+            });
+          }
+        } catch (e) {
+          // Ignore storage restrictions
+        }
+        return [];
+      }
+
+      function saveSessionRatings() {
+        try {
+          sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state.sessionRatings));
+        } catch (e) {
+          // Ignore storage restrictions
+        }
+      }
+
+      // =========================================================================
+      // DOM ELEMENTS
+      // =========================================================================
+      const bgPhotoEl = document.getElementById('bg-photo');
+      const starButtons = Array.from(document.querySelectorAll('.star-btn'));
+      const ratingStepMeta = document.getElementById('ratingStepMeta');
+      const ratingTitle = document.getElementById('ratingTitle');
+      const ratingMessage = document.getElementById('ratingMessage');
+
+      const keywordsSection = document.getElementById('keywordsSection');
+      const keywordsGrid = document.getElementById('keywordsGrid');
+      const keywordCountMeta = document.getElementById('keywordCountMeta');
+
+      const errorAlert = document.getElementById('errorAlert');
+      const errorAlertText = document.getElementById('errorAlertText');
+
+      const generateBtn = document.getElementById('generateBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const loadingPanel = document.getElementById('loadingPanel');
+      const loadingText = document.getElementById('loadingText');
+
+      const previewSection = document.getElementById('previewSection');
+      const previewStars = document.getElementById('previewStars');
+      const reviewTextarea = document.getElementById('reviewTextarea');
+      const draftCounterMeta = document.getElementById('draftCounterMeta');
+      const copySuccessAlert = document.getElementById('copySuccessAlert');
+      const copyBtn = document.getElementById('copyBtn');
+      const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+      const newDraftBtn = document.getElementById('newDraftBtn');
+      const googleReviewBtn = document.getElementById('googleReviewBtn');
+      const googleInstruction = document.getElementById('googleInstruction');
+
+      const chartSummaryText = document.getElementById('chartSummaryText');
+      const clearChartBtn = document.getElementById('clearChartBtn');
+      const d3ChartContainer = document.getElementById('d3ChartContainer');
+      const chartEmptyNote = document.getElementById('chartEmptyNote');
+      const chartTooltip = document.getElementById('chartTooltip');
+
+      // Apply owner-configured background image & Google Review URL
+      if (RESTAURANT_CONFIG.backgroundImageUrl) {
+        bgPhotoEl.style.backgroundImage =
+          "radial-gradient(ellipse at 50% 0%, rgba(72, 48, 28, 0.45), transparent 70%), url('" +
+          RESTAURANT_CONFIG.backgroundImageUrl +
+          "')";
+      }
+      googleReviewBtn.href = RESTAURANT_CONFIG.googleReviewUrl;
+
+      // =========================================================================
+      // STAR RATING & KEYWORDS UI LOGIC
+      // =========================================================================
+      function renderStarsVisual(previewVal) {
+        const displayVal = previewVal || state.selectedRating;
+        starButtons.forEach(function (btn) {
+          const val = Number(btn.dataset.rating);
+          const isLit = val <= displayVal;
+          const isAnchor = state.selectedRating === val;
+          btn.classList.toggle('is-active', isLit && !previewVal);
+          btn.classList.toggle('is-preview', isLit && Boolean(previewVal));
+          btn.classList.toggle('is-selected-anchor', isAnchor);
+          btn.setAttribute('aria-checked', isAnchor ? 'true' : 'false');
+        });
+      }
+
+      function updateRatingFeedback(rating) {
+        if (!rating) {
+          ratingStepMeta.textContent = 'Select 1 to 5 stars';
+          ratingTitle.textContent = 'Tap a star above to begin';
+          ratingMessage.textContent = 'Your honest feedback helps our kitchen and hospitality team keep improving.';
+          return;
+        }
+        const info = RATING_DATA[rating];
+        ratingStepMeta.textContent = info.label;
+        ratingTitle.textContent = info.label;
+        ratingMessage.textContent = info.message;
+      }
+
+      function renderKeywordsForRating(rating) {
+        keywordsGrid.innerHTML = '';
+        if (!rating) {
+          keywordsSection.classList.remove('is-visible');
+          return;
+        }
+
+        const keywords = RATING_DATA[rating].keywords;
+        keywords.forEach(function (kw) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'keyword-btn';
+          btn.dataset.keyword = kw;
+          btn.setAttribute('aria-pressed', state.selectedKeywords.has(kw) ? 'true' : 'false');
+          if (state.selectedKeywords.has(kw)) {
+            btn.classList.add('is-selected');
+          }
+
+          btn.innerHTML =
+            '<svg class="keyword-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">' +
+            '<polyline points="20 6 9 17 4 12" />' +
+            '</svg>' +
+            '<span>' + kw + '</span>';
+
+          btn.addEventListener('click', function () {
+            if (state.selectedKeywords.has(kw)) {
+              state.selectedKeywords.delete(kw);
+              btn.classList.remove('is-selected');
+              btn.setAttribute('aria-pressed', 'false');
+            } else {
+              state.selectedKeywords.add(kw);
+              btn.classList.add('is-selected');
+              btn.setAttribute('aria-pressed', 'true');
+            }
+            updateKeywordCountMeta();
+            hideError();
+          });
+
+          keywordsGrid.appendChild(btn);
+        });
+
+        keywordsSection.classList.add('is-visible');
+        updateKeywordCountMeta();
+      }
+
+      function updateKeywordCountMeta() {
+        const count = state.selectedKeywords.size;
+        if (count === 0) {
+          keywordCountMeta.textContent = 'Choose one or more highlights';
+        } else if (count === 1) {
+          keywordCountMeta.textContent = '1 highlight selected';
+        } else {
+          keywordCountMeta.textContent = count + ' highlights selected';
+        }
+      }
+
+      function handleStarSelect(rating) {
+        const previousRating = state.selectedRating;
+        state.selectedRating = rating;
+
+        // Immediately swap available keywords when rating changes; keep any matching ones
+        if (previousRating !== rating) {
+          const allowed = new Set(RATING_DATA[rating].keywords);
+          const nextSelected = new Set();
+          state.selectedKeywords.forEach(function (kw) {
+            if (allowed.has(kw)) nextSelected.add(kw);
+          });
+          state.selectedKeywords = nextSelected;
+        }
+
+        renderStarsVisual(0);
+        updateRatingFeedback(rating);
+        renderKeywordsForRating(rating);
+        hideError();
+        renderD3Chart();
+      }
+
+      starButtons.forEach(function (btn) {
+        const val = Number(btn.dataset.rating);
+        btn.addEventListener('mouseenter', function () {
+          state.hoveredRating = val;
+          renderStarsVisual(val);
+        });
+        btn.addEventListener('mouseleave', function () {
+          state.hoveredRating = 0;
+          renderStarsVisual(0);
+        });
+        btn.addEventListener('click', function () {
+          handleStarSelect(val);
+        });
+      });
+
+      // =========================================================================
+      // ERROR & COPY BANNER HELPERS
+      // =========================================================================
+      function showError(msg) {
+        errorAlertText.textContent = msg;
+        errorAlert.classList.add('is-visible');
+      }
+
+      function hideError() {
+        errorAlert.classList.remove('is-visible');
+      }
+
+      function resetCopyState() {
+        copySuccessAlert.classList.remove('is-visible');
+        copyBtn.textContent = '📋 Copy Review';
+        state.hasCopiedCurrentDraft = false;
+        googleInstruction.textContent = 'Copy your review first, then paste it on Google to share your experience.';
+        googleInstruction.classList.remove('is-highlighted');
+      }
+
+      // =========================================================================
+      // UNIQUE REVIEW GENERATION WITH SESSION DUPLICATE PREVENTION
+      // =========================================================================
+      function normalizeForDuplicateCheck(text) {
+        return text.toLowerCase().replace(/\s+/g, ' ').trim();
+      }
+
+      function generateUniqueLocalReview(rating, keywordsArray) {
+        const maxAttempts = 60;
+        let candidate = '';
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          // Ensure we pick a different writing style than the immediately preceding draft
+          let styleIndex = Math.floor(Math.random() * REVIEW_STYLES.length);
+          if (REVIEW_STYLES.length > 1 && styleIndex === state.lastStyleIndex) {
+            styleIndex = (styleIndex + 1 + Math.floor(Math.random() * (REVIEW_STYLES.length - 1))) % REVIEW_STYLES.length;
+          }
+
+          const rawDraft = REVIEW_STYLES[styleIndex](rating, keywordsArray).replace(/\s+/g, ' ').trim();
+          const normalized = normalizeForDuplicateCheck(rawDraft);
+
+          if (!state.generatedHistory.has(normalized)) {
+            state.lastStyleIndex = styleIndex;
+            state.generatedHistory.add(normalized);
+            return rawDraft;
+          }
+          candidate = rawDraft;
+        }
+
+        // Guaranteed uniqueness fallback if the user clicks dozens of times on 1 keyword
+        const uniqueSignoffs = [
+          'Appreciated the visit overall.',
+          'Just sharing a quick take from our table.',
+          'Thanks to the team for hosting us.',
+          'Thought this was worth jotting down.',
+          'Glad to share a quick note from our outing.',
+          'Sharing this straight from our visit today.'
+        ];
+        for (let i = 0; i < uniqueSignoffs.length; i++) {
+          const alt = candidate + ' ' + uniqueSignoffs[i];
+          const norm = normalizeForDuplicateCheck(alt);
+          if (!state.generatedHistory.has(norm)) {
+            state.generatedHistory.add(norm);
+            return alt;
+          }
+        }
+
+        const stamped = candidate + ' (Visit note #' + (state.generatedHistory.size + 1) + ')';
+        state.generatedHistory.add(normalizeForDuplicateCheck(stamped));
+        return stamped;
+      }
+
+      function renderPreviewStars(rating) {
+        previewStars.innerHTML = '';
+        for (let i = 1; i <= 5; i++) {
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('viewBox', '0 0 24 24');
+          svg.setAttribute('aria-hidden', 'true');
+          svg.style.color = i <= rating ? '#d4a853' : 'rgba(245, 239, 230, 0.22)';
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', 'M12 2.4l2.92 5.92 6.53.95-4.72 4.6 1.11 6.5L12 17.3l-5.84 3.07 1.11-6.5-4.72-4.6 6.53-.95L12 2.4z');
+          svg.appendChild(path);
+          previewStars.appendChild(svg);
+        }
+        const labelSpan = document.createElement('span');
+        labelSpan.style.marginLeft = '6px';
+        labelSpan.textContent = RATING_DATA[rating].label;
+        previewStars.appendChild(labelSpan);
+      }
+
+      async function runReviewGeneration(options) {
+        const isNewDraft = Boolean(options && options.isNewDraft);
+        if (state.isGenerating) return;
+
+        if (!state.selectedRating) {
+          showError('Please choose a star rating (1 to 5 stars) before generating your review.');
+          return;
+        }
+        if (state.selectedKeywords.size === 0) {
+          showError('Please select at least one highlight keyword to shape your review.');
+          return;
+        }
+
+        hideError();
+        resetCopyState();
+
+        state.isGenerating = true;
+        generateBtn.disabled = true;
+        newDraftBtn.disabled = true;
+        downloadTxtBtn.disabled = true;
+        loadingText.textContent = isNewDraft
+          ? 'Writing a completely fresh draft...'
+          : 'Crafting a natural review draft...';
+        loadingPanel.classList.add('is-visible');
+
+        const ratingSnapshot = state.selectedRating;
+        const keywordsSnapshot = Array.from(state.selectedKeywords);
+
+        // Brief realistic pacing so the transition feels deliberate and smooth
+        await new Promise(function (resolve) {
+          setTimeout(resolve, 420);
+        });
+
+        let reviewText = null;
+        try {
+          reviewText = await generateReviewWithExternalAI(ratingSnapshot, keywordsSnapshot);
+        } catch (err) {
+          reviewText = null;
+        }
+
+        if (!reviewText) {
+          reviewText = generateUniqueLocalReview(ratingSnapshot, keywordsSnapshot);
+        }
+
+        state.draftCount += 1;
+        state.isGenerating = false;
+        generateBtn.disabled = false;
+        newDraftBtn.disabled = false;
+        downloadTxtBtn.disabled = false;
+        loadingPanel.classList.remove('is-visible');
+
+        renderPreviewStars(ratingSnapshot);
+        reviewTextarea.value = reviewText;
+        draftCounterMeta.textContent = 'Draft #' + state.draftCount;
+        previewSection.classList.add('is-visible');
+
+        // Record rating into session distribution when "Generate My Review" is used
+        // ("Generate New Draft" refines the same customer's draft without double-counting)
+        if (!isNewDraft) {
+          state.sessionRatings.push(ratingSnapshot);
+          saveSessionRatings();
+          renderD3Chart();
+        }
+
+        previewSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      generateBtn.addEventListener('click', function () {
+        runReviewGeneration({ isNewDraft: false });
+      });
+
+      newDraftBtn.addEventListener('click', function () {
+        runReviewGeneration({ isNewDraft: true });
+      });
+
+      // =========================================================================
+      // RESET SELECTION HANDLER
+      // =========================================================================
+      resetBtn.addEventListener('click', function () {
+        state.selectedRating = 0;
+        state.hoveredRating = 0;
+        state.selectedKeywords.clear();
+        state.draftCount = 0;
+        renderStarsVisual(0);
+        updateRatingFeedback(0);
+        renderKeywordsForRating(0);
+        hideError();
+        resetCopyState();
+        previewSection.classList.remove('is-visible');
+        loadingPanel.classList.remove('is-visible');
+        reviewTextarea.value = '';
+        renderD3Chart();
+      });
+
+      // =========================================================================
+      // CLIPBOARD COPY WITH DESKTOP + MOBILE FALLBACK
+      // =========================================================================
+      async function copyTextToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          try {
+            await navigator.clipboard.writeText(text);
+            return true;
+          } catch (e) {
+            // Fall through to execCommand fallback
+          }
+        }
+
+        // Legacy & mobile fallback
+        const helper = document.createElement('textarea');
+        helper.value = text;
+        helper.setAttribute('readonly', '');
+        helper.style.position = 'fixed';
+        helper.style.top = '-9999px';
+        helper.style.left = '-9999px';
+        helper.style.opacity = '0';
+        document.body.appendChild(helper);
+
+        const prevSelection = document.activeElement;
+        helper.focus();
+        helper.select();
+        helper.setSelectionRange(0, helper.value.length);
+
+        let success = false;
+        try {
+          success = document.execCommand('copy');
+        } catch (err) {
+          success = false;
+        }
+        document.body.removeChild(helper);
+        if (prevSelection && typeof prevSelection.focus === 'function') {
+          prevSelection.focus();
+        }
+        return success;
+      }
+
+      let copyResetTimer = null;
+
+      copyBtn.addEventListener('click', async function () {
+        const textToCopy = reviewTextarea.value.trim();
+        if (!textToCopy) {
+          showError('Generate or enter a review before copying.');
+          return;
+        }
+        hideError();
+
+        const ok = await copyTextToClipboard(textToCopy);
+        if (ok) {
+          copyBtn.textContent = 'Copied!';
+          copySuccessAlert.classList.add('is-visible');
+          state.hasCopiedCurrentDraft = true;
+          googleInstruction.textContent = 'Your review has been copied! Paste it on Google to share your experience.';
+          googleInstruction.classList.add('is-highlighted');
+
+          if (copyResetTimer) clearTimeout(copyResetTimer);
+          copyResetTimer = setTimeout(function () {
+            copyBtn.textContent = '📋 Copy Review';
+          }, 2600);
+        } else {
+          showError('Could not access the clipboard automatically. Please select the text above and copy it manually.');
+        }
+      });
+
+      let downloadResetTimer = null;
+
+      downloadTxtBtn.addEventListener('click', function () {
+        const textToDownload = reviewTextarea.value.trim();
+        if (!textToDownload) {
+          showError('Generate or enter a review before downloading.');
+          return;
+        }
+        hideError();
+
+        const ratingPart = state.selectedRating ? '-' + state.selectedRating + 'stars' : '';
+        const filename = 'dine-house-review' + ratingPart + '.txt';
+        const blob = new Blob([textToDownload + '\n'], { type: 'text/plain;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(function () {
+          URL.revokeObjectURL(blobUrl);
+        }, 1000);
+
+        downloadTxtBtn.textContent = 'Downloaded!';
+        if (downloadResetTimer) clearTimeout(downloadResetTimer);
+        downloadResetTimer = setTimeout(function () {
+          downloadTxtBtn.textContent = 'Download as Text File';
+        }, 2200);
+      });
+
+      googleReviewBtn.addEventListener('click', function () {
+        // Ensure Google Review link opens in new tab only on customer click
+        googleReviewBtn.href = RESTAURANT_CONFIG.googleReviewUrl;
+        if (!state.hasCopiedCurrentDraft) {
+          googleInstruction.textContent = 'Your review has been copied! Paste it on Google to share your experience.';
+          // Also quietly copy to clipboard on click so pasting on Google works seamlessly
+          const textToCopy = reviewTextarea.value.trim();
+          if (textToCopy) {
+            copyTextToClipboard(textToCopy).then(function (ok) {
+              if (ok) {
+                copySuccessAlert.classList.add('is-visible');
+                googleInstruction.classList.add('is-highlighted');
+              }
+            });
+          }
+        }
+      });
+
+      // =========================================================================
+      // D3.JS BAR CHART: SESSION STAR RATING DISTRIBUTION
+      // =========================================================================
+      function computeRatingDistribution() {
+        const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        state.sessionRatings.forEach(function (r) {
+          if (counts[r] !== undefined) counts[r] += 1;
+        });
+
+        const total = state.sessionRatings.length;
+        const sum = state.sessionRatings.reduce(function (acc, n) {
+          return acc + n;
+        }, 0);
+        const avg = total > 0 ? (sum / total).toFixed(1) : '—';
+
+        const data = [1, 2, 3, 4, 5].map(function (star) {
+          const count = counts[star];
+          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+          return {
+            star: star,
+            label: star + '★',
+            title: RATING_DATA[star].label,
+            count: count,
+            pct: pct
+          };
+        });
+
+        return { data: data, total: total, avg: avg };
+      }
+
+      function renderD3Chart() {
+        const stats = computeRatingDistribution();
+        const totalLabel = stats.total === 1 ? '1 rating' : stats.total + ' ratings';
+        chartSummaryText.textContent = totalLabel + ' · ' + stats.avg + (stats.total > 0 ? '★ avg' : ' avg');
+        chartEmptyNote.style.display = stats.total === 0 ? 'block' : 'none';
+
+        // Remove previous SVG while preserving tooltip element
+        const existingSvg = d3ChartContainer.querySelector('svg');
+        if (existingSvg) existingSvg.remove();
+
+        // Guard in case D3 CDN is blocked in an offline environment
+        if (typeof window.d3 === 'undefined') {
+          chartEmptyNote.style.display = 'block';
+          chartEmptyNote.textContent = 'Chart library loading unavailable offline. Session total: ' + totalLabel + '.';
+          return;
+        }
+
+        const d3 = window.d3;
+        const containerWidth = Math.max(300, d3ChartContainer.clientWidth || 680);
+        const width = containerWidth;
+        const height = 220;
+        const margin = { top: 22, right: 16, bottom: 34, left: 34 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = d3
+          .select(d3ChartContainer)
+          .insert('svg', ':first-child')
+          .attr('viewBox', '0 0 ' + width + ' ' + height)
+          .attr('width', '100%')
+          .attr('height', height);
+
+        // Golden gradient definitions for bars
+        const defs = svg.append('defs');
+        const goldGrad = defs
+          .append('linearGradient')
+          .attr('id', 'barGoldGradient')
+          .attr('x1', '0%')
+          .attr('y1', '0%')
+          .attr('x2', '0%')
+          .attr('y2', '100%');
+        goldGrad.append('stop').attr('offset', '0%').attr('stop-color', '#ebd08b');
+        goldGrad.append('stop').attr('offset', '100%').attr('stop-color', '#a97f32');
+
+        const mutedGrad = defs
+          .append('linearGradient')
+          .attr('id', 'barBronzeGradient')
+          .attr('x1', '0%')
+          .attr('y1', '0%')
+          .attr('x2', '0%')
+          .attr('y2', '100%');
+        mutedGrad.append('stop').attr('offset', '0%').attr('stop-color', '#c69a4b');
+        mutedGrad.append('stop').attr('offset', '100%').attr('stop-color', '#785622');
+
+        const g = svg
+          .append('g')
+          .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+        const xScale = d3
+          .scaleBand()
+          .domain(stats.data.map(function (d) { return d.label; }))
+          .range([0, innerWidth])
+          .padding(0.32);
+
+        const maxCount = d3.max(stats.data, function (d) { return d.count; }) || 0;
+        const yMax = Math.max(4, maxCount + 1);
+
+        const yScale = d3
+          .scaleLinear()
+          .domain([0, yMax])
+          .nice()
+          .range([innerHeight, 0]);
+
+        // Horizontal gridlines
+        const yTicks = yScale.ticks(Math.min(5, yMax)).filter(function (t) {
+          return Number.isInteger(t);
+        });
+
+        g.append('g')
+          .selectAll('line')
+          .data(yTicks)
+          .join('line')
+          .attr('x1', 0)
+          .attr('x2', innerWidth)
+          .attr('y1', function (d) { return yScale(d); })
+          .attr('y2', function (d) { return yScale(d); })
+          .attr('stroke', 'rgba(245, 239, 230, 0.08)')
+          .attr('stroke-dasharray', '3,3');
+
+        // Y Axis (integer counts)
+        const yAxis = d3
+          .axisLeft(yScale)
+          .tickValues(yTicks)
+          .tickFormat(d3.format('d'))
+          .tickSize(0)
+          .tickPadding(10);
+
+        const yAxisG = g.append('g').call(yAxis);
+        yAxisG.select('.domain').remove();
+        yAxisG.selectAll('text')
+          .attr('fill', '#c8bca9')
+          .attr('font-size', '12px')
+          .attr('font-family', 'Plus Jakarta Sans, sans-serif')
+          .style('font-variant-numeric', 'tabular-nums');
+
+        // X Axis (1★ to 5★)
+        const xAxis = d3
+          .axisBottom(xScale)
+          .tickSize(0)
+          .tickPadding(12);
+
+        const xAxisG = g
+          .append('g')
+          .attr('transform', 'translate(0,' + innerHeight + ')')
+          .call(xAxis);
+        xAxisG.select('.domain').attr('stroke', 'rgba(212, 168, 83, 0.25)');
+        xAxisG.selectAll('text')
+          .attr('fill', function (d) {
+            const starNum = parseInt(d, 10);
+            return state.selectedRating === starNum ? '#ebd08b' : '#f5efe6';
+          })
+          .attr('font-size', '13px')
+          .attr('font-weight', function (d) {
+            const starNum = parseInt(d, 10);
+            return state.selectedRating === starNum ? '700' : '500';
+          })
+          .attr('font-family', 'Plus Jakarta Sans, sans-serif');
+
+        // Subtle baseline track behind each bar
+        g.selectAll('.bar-track')
+          .data(stats.data)
+          .join('rect')
+          .attr('class', 'bar-track')
+          .attr('x', function (d) { return xScale(d.label); })
+          .attr('y', 0)
+          .attr('width', xScale.bandwidth())
+          .attr('height', innerHeight)
+          .attr('rx', 8)
+          .attr('fill', 'rgba(255, 255, 255, 0.03)');
+
+        // Animated Data Bars
+        const bars = g
+          .selectAll('.rating-bar')
+          .data(stats.data)
+          .join('rect')
+          .attr('class', 'rating-bar')
+          .attr('x', function (d) { return xScale(d.label); })
+          .attr('width', xScale.bandwidth())
+          .attr('rx', 8)
+          .attr('y', innerHeight)
+          .attr('height', 0)
+          .attr('fill', function (d) {
+            if (d.star >= 4 || state.selectedRating === d.star) {
+              return 'url(#barGoldGradient)';
+            }
+            return 'url(#barBronzeGradient)';
+          })
+          .attr('stroke', function (d) {
+            return state.selectedRating === d.star ? '#ebd08b' : 'none';
+          })
+          .attr('stroke-width', function (d) {
+            return state.selectedRating === d.star ? 1.5 : 0;
+          })
+          .style('cursor', 'pointer')
+          .on('mouseenter', function (event, d) {
+            d3.select(this).attr('opacity', 0.9);
+            showChartTooltip(event, d);
+          })
+          .on('mousemove', function (event, d) {
+            showChartTooltip(event, d);
+          })
+          .on('mouseleave', function () {
+            d3.select(this).attr('opacity', 1);
+            hideChartTooltip();
+          })
+          .on('click', function (event, d) {
+            showChartTooltip(event, d);
+          });
+
+        bars
+          .transition()
+          .duration(420)
+          .ease(d3.easeCubicOut)
+          .attr('y', function (d) { return yScale(d.count); })
+          .attr('height', function (d) {
+            return Math.max(0, innerHeight - yScale(d.count));
+          });
+
+        // Count labels above non-zero bars
+        g.selectAll('.bar-label')
+          .data(stats.data)
+          .join('text')
+          .attr('class', 'bar-label')
+          .attr('x', function (d) { return xScale(d.label) + xScale.bandwidth() / 2; })
+          .attr('y', function (d) { return yScale(d.count) - 7; })
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#ebd08b')
+          .attr('font-size', '12px')
+          .attr('font-weight', '600')
+          .attr('font-family', 'Plus Jakarta Sans, sans-serif')
+          .style('font-variant-numeric', 'tabular-nums')
+          .text(function (d) { return d.count > 0 ? d.count : ''; })
+          .attr('opacity', 0)
+          .transition()
+          .duration(420)
+          .attr('opacity', 1);
+      }
+
+      function showChartTooltip(event, d) {
+        const containerRect = d3ChartContainer.getBoundingClientRect();
+        const x = event.clientX - containerRect.left;
+        const y = event.clientY - containerRect.top;
+        const countWord = d.count === 1 ? 'review' : 'reviews';
+        chartTooltip.textContent = d.title + ' · ' + d.count + ' ' + countWord + ' (' + d.pct + '%)';
+        chartTooltip.style.left = Math.max(80, Math.min(containerRect.width - 80, x)) + 'px';
+        chartTooltip.style.top = Math.max(36, y) + 'px';
+        chartTooltip.style.opacity = '1';
+      }
+
+      function hideChartTooltip() {
+        chartTooltip.style.opacity = '0';
+      }
+
+      clearChartBtn.addEventListener('click', function () {
+        state.sessionRatings = [];
+        saveSessionRatings();
+        hideChartTooltip();
+        renderD3Chart();
+      });
+
+      // Re-render chart cleanly on viewport resize
+      let resizeTimer = null;
+      window.addEventListener('resize', function () {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(renderD3Chart, 120);
+      });
+
+      // Initial render once DOM & D3 are ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', renderD3Chart);
+      } else {
+        renderD3Chart();
+      }
+    })();
+  </script>
+</body>
+</html>
